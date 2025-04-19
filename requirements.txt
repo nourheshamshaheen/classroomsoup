@@ -1,0 +1,12 @@
+timm==1.0.15
+pytorch-lightning==2.0.7
+comet-ml>=3.47.5,<3.50
+torchmetrics==1.2.0
+numpy==1.26.4
+pandas==2.2.3
+python-dotenv==1.0.1
+scikit-learn==1.6.1
+transformers==4.46.2
+datasets
+matplotlib==3.9.2
+nltk
