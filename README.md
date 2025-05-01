@@ -2,28 +2,28 @@
 
 This is part of the final project for the course INF6953PE: Deep Learning Dynamics (Winter 2025) with Professor Sarath Chandar. This is the work of Nour Shaheen.
 
-This repository presents a **curriculum‑learning & model‑merging** code for image‑classification.  
+This repository presents a **curriculum‑learning & model‑merging** code for image‑classification.
 
 Out‑of‑the‑box you can:
 
-* Train **data curricula** (easy‑to‑hard sampling) or **task curricula** (coarse‑to‑fine labels) on **CIFAR‑100** or **ImageNet**  
-* Generate or reuse difficulty scores (C‑scores) and validation splits  
-* Log every run to **Comet** with one flag  
-* Evaluate checkpoints in a single command  
+* Train **data curricula** (easy‑to‑hard sampling) or **task curricula** (coarse‑to‑fine labels) on **CIFAR‑100** or **ImageNet**
+* Generate or reuse difficulty scores (C‑scores) and validation splits
+* Log every run to **Comet** with one flag
+* Evaluate checkpoints in a single command
 * Merge checkpoints with **greedy soup, iterative uniform soup, or Fisher‑weighted averaging**
 
 ---
 
 ## Table of Contents
-1. [Setup Environment](#setup-environment)  
-2. [Project Overview](#project-overview)  
-3. [Folder Structure](#folder-structure)  
-4. [Quick Start](#quick-start)  
-5. [Training Options](#training-options)  
-6. [Validation Split & C‑Scores](#validation-split--c-scores)  
-7. [Model Merging](#model-merging)  
-8. [Testing a Checkpoint](#testing-a-checkpoint)  
-9. [Environment Variables](#environment-variables)  
+1. [Setup Environment](#setup-environment)
+2. [Project Overview](#project-overview)
+3. [Folder Structure](#folder-structure)
+4. [Quick Start](#quick-start)
+5. [Training Options](#training-options)
+6. [Validation Split & C‑Scores](#validation-split--c-scores)
+7. [Model Merging](#model-merging)
+8. [Testing a Checkpoint](#testing-a-checkpoint)
+9. [Environment Variables](#environment-variables)
 10. [Contributing](#contributing) & [License](#license)
 
 ---
@@ -52,7 +52,7 @@ cd classroomsoup
    conda activate $HOME/class_soup
    ```
 
-3. **Install a CUDA‑compatible PyTorch build** 
+3. **Install a CUDA‑compatible PyTorch build**
 
     Install the correct prebuilt PyTorch version before installing other libraries. It had to be compatible with your CUDA driver. For example, if you have CUDA 11.7, you should install PyTorch 2.0.1 compiled with cu117:
 
@@ -164,7 +164,7 @@ Key flags inside the scripts:
 ## Validation Split & C‑Scores
 
 * A ready‑made stratified split for CIFAR‑100 lives at **`split/cifar100_val_split.npz`**.
-* Want a fresh split?  
+* Want a fresh split?
   ```bash
   python src/gen_val_indices.py  # creates split/cifar100_val_split.npz
   ```

@@ -35,13 +35,13 @@ class PacingScheduler:
         """
         step_count = self.current_epoch // self.step
 
-        if self.method == 'linear':
+        if self.method == "linear":
             new_fraction = min(1, self.alpha0 + self.lambda_ * step_count)
-        elif self.method == 'exponential':
-            new_fraction = min(1, self.alpha0 * (self.r ** step_count))
+        elif self.method == "exponential":
+            new_fraction = min(1, self.alpha0 * (self.r**step_count))
         else:
             raise ValueError("Unknown pacing method. Use 'linear' or 'exponential'.")
-        
+
         self.current_fraction = new_fraction
 
     def next_epoch(self):
