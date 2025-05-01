@@ -45,7 +45,7 @@ def main(args):
     if args.use_comet:
         comet_logger = CometLogger(
             api_key=os.environ["COMET_API_KEY"],
-            project_name="classroomsoup",
+            project_name=os.environ["COMET_PROJECT_NAME"],
             workspace="nourshaheen",
             experiment_name=args.experiment_name
         )

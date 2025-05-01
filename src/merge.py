@@ -21,12 +21,16 @@ def validate_fn(model, dataloader, device):
     """Compute macro‑F1 on *dataloader* (like Lightning)."""
     model.eval()
     num_classes = getattr(model, "num_classes", 1000)
-    metric      = F1Score(task="multiclass", num_classes=num_classes, average="macro")
+    f1_metric   = F1Score(task="multiclass", num_classes=num_classes, average="macro")
+    running_vals = []
     with torch.no_grad():
         for imgs, lbls in dataloader:
             imgs, lbls = imgs.to(device), lbls.to(device)
-            metric.update(model(imgs).argmax(1).cpu(), lbls.cpu())
-    return metric.compute().item()
+            preds = model(imgs).argmax(dim=1)
+            batch_running_f1 = f1_metric(preds.cpu(), lbls.cpu()).item()
+            running_vals.append(batch_running_f1)
+            
+    return float(sum(running_vals) / len(running_vals))
 
 
 
@@ -129,11 +133,26 @@ def iterative_greedy_soup(model_paths, model_names, model_scores,
 
 
 def fisher_weighted_averaging(model_dicts, fisher_mats, lam=None, eps: float = 1e-8):
-    lam = torch.as_tensor(lam or [1.0]*len(model_dicts), dtype=torch.float32)
+    device = next(iter(fisher_mats[0].values())).device
+    lam = torch.as_tensor(lam or [1.0]*len(model_dicts), dtype=torch.float32, device=device)
+    # Ensure all tensors are on the same device
+    model_dicts = [{k: v.to(device) for k, v in d.items()} for d in model_dicts]
+    fisher_mats = [{k: v.to(device) for k, v in f.items()} for f in fisher_mats]
+
     merged = {}
     for k in model_dicts[0]:
+        if k not in fisher_mats[0]:
+            # Just do a regular average for non-Fisher keys (e.g., buffers)
+            θ = torch.stack([m[k] for m in model_dicts])
+            if not θ.is_floating_point():
+                merged[k] = θ.float().mean(0).to(dtype=θ.dtype)
+            else:
+                merged[k] = θ.mean(0)
+            continue
+
         θ  = torch.stack([m[k] for m in model_dicts])   # (n, …)
         F  = torch.stack([f[k] for f in fisher_mats])   # (n, …)
+
         wF = lam.view(-1, *([1]*(θ.dim()-1))) * F       # broadcast
         nume = (wF * θ).sum(0)
         deno =  wF.sum(0)
@@ -184,7 +203,7 @@ if __name__ == "__main__":
     P.add_argument("--curriculum-type", choices=["data","task","None"], required=True)
     P.add_argument("--dataset", default="CIFAR100")
     P.add_argument("--batch-size", type=int, default=64)
-    P.add_argument("--task-curr-stage", type=int, choices=[1,2], default=1)
+    P.add_argument("--task-curr-stage", type=int, choices=[1,2], default=2)
     P.add_argument("--val_indices_path", default="split/cifar100_val_split.npz")
     args = P.parse_args()
 
