@@ -22,9 +22,9 @@ seed_everything(42)
 
 def train_model(model, train_loader, val_loader, logger=None, checkpoint_callbacks=[], batch_size=64,
                 lr=1e-03, num_classes=100, max_epochs=10, curriculum_dataset=None,
-                variant="staged", coarse_mapping=None, device="cuda"):
+                variant="staged", coarse_mapping=None, optimizer="adam", weight_decay=5e-04, device="cuda"):
     print("LOGGER:", logger)
-    lit_model = LitClassifier(model, lr=lr, num_classes=num_classes, batch_size=batch_size, curriculum_dataset=curriculum_dataset,
+    lit_model = LitClassifier(model, lr=lr, num_classes=num_classes, batch_size=batch_size, optimizer=optimizer, weight_decay=weight_decay, curriculum_dataset=curriculum_dataset,
                               variant=variant, coarse_mapping=coarse_mapping)
     trainer = pl.Trainer(
         max_epochs=max_epochs,
@@ -140,7 +140,7 @@ def main(args):
     print("Starting training with PyTorch Lightning...")
     train_model(model, train_loader, val_loader, comet_logger, callbacks_list, batch_size=args.batch_size, lr=args.lr, 
                 num_classes=args.num_classes, max_epochs=args.max_epochs, 
-                curriculum_dataset=curriculum_dataset, variant=args.variant, coarse_mapping=coarse_mapping, device=args.device)
+                curriculum_dataset=curriculum_dataset, variant=args.variant, coarse_mapping=coarse_mapping, optimizer=args.optimizer, weight_decay=args.weight_decay, device=args.device)
 
 #############################################
 # Main 
@@ -163,8 +163,11 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate')
     parser.add_argument('--max_epochs', type=int, default=100, help='Number of training epochs')
     parser.add_argument('--balance_batches', action='store_true', help='Balance classes per batch if set')
-    parser.add_argument('--pretrained', action='store_true', help='Use pretrained model on imagenet in Data curriculum')
+    parser.add_argument('--pretrained', action='store_true', help='Use pretrained model on imagenet in Data curriculum or coarse task curriculum')
     parser.add_argument('--old_classes', type=int, default=20, help='Number of old output classes')
+    parser.add_argument('--optimizer', type=str, default='adam', choices=['adam', 'sgd', 'adagrad', 'adamw'], help='Optimizer to use')
+    parser.add_argument('--weight_decay', type=float, default=5e-4, help='Weight decay (L2 regularization strength)')
+
     ###############################
     # Curriculum Dataset Settings
     ###############################

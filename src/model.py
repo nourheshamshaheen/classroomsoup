@@ -32,7 +32,7 @@ def continuous_loss(logits, cluster_targets, coarse_mapping):
 #############################################
 
 class LitClassifier(pl.LightningModule):
-    def __init__(self, model, lr=1e-3, num_classes=100, batch_size=64, data_fraction=1.0, curriculum_dataset=None, variant="staged", coarse_mapping=None):
+    def __init__(self, model, lr=1e-3, num_classes=100, batch_size=64, data_fraction=1.0, curriculum_dataset=None, variant="staged", coarse_mapping=None, optimizer="adam", weight_decay=5e-04):
         """
         variant: 'staged' or 'continuous'. 
           - For the continuous variant, the dataloader is expected to return (data, cluster_target),
@@ -48,6 +48,8 @@ class LitClassifier(pl.LightningModule):
         self.data_fraction = data_fraction  
         self.batch_size = batch_size
         self.variant = variant
+        self.optimizer = optimizer
+        self.weight_decay = weight_decay
         self.curriculum_dataset = curriculum_dataset  # may contain additional info for curriculum training.
         # For the continuous variant, we require the coarse_mapping.
         if self.variant == "continuous" and coarse_mapping is None:
@@ -111,21 +113,35 @@ class LitClassifier(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer_map = {
+            'adam': torch.optim.Adam,
+            'adamw': torch.optim.AdamW,
+            'sgd': lambda params, **kwargs: torch.optim.SGD(params, momentum=0.9, **kwargs),
+            'adagrad': torch.optim.Adagrad,
+        }
+
+        opt_name = self.optimizer.lower()
+        if opt_name not in optimizer_map:
+            raise ValueError(f"Unsupported optimizer type: {self.optimizer}")
+
+        optimizer_class = optimizer_map[opt_name]
+        optimizer = optimizer_class(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, 
-            T_max=self.trainer.max_epochs  # Cosine over the entire training
+            optimizer,
+            T_max=self.trainer.max_epochs
         )
-        
+
         return {
             'optimizer': optimizer,
             'lr_scheduler': {
                 'scheduler': scheduler,
-                'interval': 'epoch',    # step per-epoch
+                'interval': 'epoch',
                 'frequency': 1,
-                'monitor': 'val_loss',  # optional, needed only for ReduceLROnPlateau
+                'monitor': 'val_loss',
             }
         }
+
 
     def on_save_checkpoint(self, checkpoint):
         # Add additional state to the checkpoint dictionary.
