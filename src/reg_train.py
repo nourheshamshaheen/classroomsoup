@@ -60,13 +60,27 @@ def get_regular_dataloaders(
 
 
 def train_model(
-    model, train_loader, val_loader, logger, checkpoint_callbacks, max_epochs, lr
+    model,
+    train_loader,
+    val_loader,
+    logger,
+    checkpoint_callbacks,
+    max_epochs,
+    lr,
+    optimizer,
+    weight_decay,
 ):
     """
     Wraps the model in a Lightning module and starts training.
     Here we assume that regular training uses the staged variant and simple cross-entropy loss.
     """
-    lit_model = LitClassifier(model, lr=lr, num_classes=args.num_classes)
+    lit_model = LitClassifier(
+        model,
+        lr=lr,
+        num_classes=args.num_classes,
+        optimizer=optimizer,
+        weight_decay=weight_decay,
+    )
     trainer = pl.Trainer(
         max_epochs=max_epochs,
         logger=logger,
@@ -83,7 +97,7 @@ def main(args):
     if args.use_comet:
         logger = CometLogger(
             api_key=os.environ.get("COMET_API_KEY"),
-            project_name="classroomsoup",
+            project_name=os.environ.get("COMET_PROJECT_NAME"),
             workspace="nourshaheen",
             experiment_name=args.experiment_name,
         )
@@ -94,12 +108,20 @@ def main(args):
     os.makedirs(save_path, exist_ok=True)
 
     # Define a checkpoint callback.
-    checkpoint_callback = ModelCheckpoint(
+    performance_checkpoint_callback = ModelCheckpoint(
         monitor="val_f1",
         dirpath=save_path,
-        filename="model-{epoch:02d}-{val_f1:.5f}",
+        filename="top5-model-{epoch:02d}-{val_f1:.5f}",
         save_top_k=5,
         mode="max",
+    )
+
+    periodic_checkpoint_callback = ModelCheckpoint(
+        dirpath=save_path,
+        filename="model-{epoch:02d}-{val_f1:.5f}",
+        every_n_epochs=args.every_k,
+        save_top_k=-1,
+        save_last=True,
     )
 
     # Create the regular train and validation dataloaders.
@@ -121,9 +143,11 @@ def main(args):
         train_loader,
         val_loader,
         logger,
-        [checkpoint_callback],
+        [performance_checkpoint_callback, periodic_checkpoint_callback],
         args.max_epochs,
         args.lr,
+        args.optimizer,
+        args.weight_decay,
     )
 
 
@@ -155,6 +179,19 @@ if __name__ == "__main__":
         "--max_epochs", type=int, default=100, help="Number of training epochs"
     )
     parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="adam",
+        choices=["adam", "sgd", "adagrad", "adamw"],
+        help="Optimizer to use",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=5e-4,
+        help="Weight decay (L2 regularization strength)",
+    )
+    parser.add_argument(
         "--save_path",
         type=str,
         default="./checkpoints",
@@ -174,6 +211,9 @@ if __name__ == "__main__":
         type=str,
         default="split/cifar100_val_split.npz",
         help="Path to .npz file with pre‑computed train/val indices",
+    )
+    parser.add_argument(
+        "-k", "--every_k", type=int, default=3, help="Save model every k epochs"
     )
 
     args = parser.parse_args()
